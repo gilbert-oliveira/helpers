@@ -2,8 +2,7 @@ name: Create Release
 
 on:
   push:
-    branches:
-      - stable
+    tags: [ "v*" ]
 
 jobs:
   release:
