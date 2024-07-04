@@ -6,16 +6,6 @@ on:
       - stable
 
 jobs:
-  php-syntax:
-    uses: moveissimonetti/github-actions/.github/workflows/check-php-syntax.yaml@main
-    secrets: inherit
-    with:
-      phpVersion: 8dot3
-
-  lint-container:
-    uses: ./.github/workflows/lint-container.yaml
-    secrets: inherit
-
   release:
     name: Create Release
     runs-on: ubuntu-latest
