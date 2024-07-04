@@ -6,6 +6,16 @@ on:
       - stable
 
 jobs:
+  php-syntax:
+    uses: moveissimonetti/github-actions/.github/workflows/check-php-syntax.yaml@main
+    secrets: inherit
+    with:
+      phpVersion: 8dot3
+
+  lint-container:
+    uses: ./.github/workflows/lint-container.yaml
+    secrets: inherit
+
   release:
     name: Create Release
     runs-on: ubuntu-latest
@@ -18,12 +28,6 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'  # Defina a versão do PHP que você está usando
-
-      - name: Install dependencies
-        run: composer install --no-progress --prefer-dist --optimize-autoloader
-
-      - name: Run unit tests
-        run: vendor/bin/phpunit
 
       - name: Create GitHub release
         id: create_release
