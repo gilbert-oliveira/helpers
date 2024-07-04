@@ -1,0 +1,36 @@
+#!/bin/bash
+
+[ ! -z ${SKIP_PRE_COMMIT+x} ] && {
+    exit 0
+}
+
+function revert_stash() {
+    if [ "$KEEP_CHANGES" != "" ]; then
+        cat $KEEP_CHANGES | git apply
+    fi
+}
+
+function commit_abort() {
+    exist_status=$?
+    printf "\033[0;31mAborting...\033[m\n"
+    revert_stash
+    exit $exist_status
+}
+
+function commit_failed() {
+    printf "\033[0;31mFix the error before commit.\033[m\n"
+    revert_stash
+    exit 1
+}
+
+KEEP_CHANGES=$(mktemp .git/staged-XXXX)
+git diff --patch >$KEEP_CHANGES
+git checkout . # remove pending changes
+trap commit_abort SIGINT SIGTERM
+
+make check-pre-commit
+if [ $? != 0 ]; then
+    commit_failed
+fi
+revert_stash
+exit 0

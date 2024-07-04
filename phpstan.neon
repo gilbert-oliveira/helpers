@@ -1,0 +1,18 @@
+includes:
+    - vendor/jangregor/phpstan-prophecy/extension.neon
+    - vendor/phpstan/phpstan-phpunit/extension.neon
+    - vendor/phpstan/phpstan-phpunit/rules.neon
+    - vendor/phpstan/phpstan-webmozart-assert/extension.neon
+    - phpstan-baseline.neon
+
+parameters:
+    level: 6
+    paths:
+        - src
+    excludePaths:
+        - tests/*
+
+    reportUnmatchedIgnoredErrors: false
+    ignoreErrors:
+
+    tmpDir: vendor/.phpstan-tmp

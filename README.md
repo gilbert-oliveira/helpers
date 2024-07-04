@@ -1,0 +1,6 @@
+## Utilização
+### Como instalar em um projeto?
+...
+## Desenvolvimento
+### Como funciona a publicação?
+...

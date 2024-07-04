@@ -1,0 +1,18 @@
+#!/bin/bash
+BASE_PATH=$( cd "$( dirname "${BASH_SOURCE[0]}"  )" && pwd  )/..
+
+for folder in $(echo $BASE_PATH/{vendor,bin,var,src,vendor/.phpstan-tmp}); do
+    if [ ! -d $folder ]; then
+        mkdir -p $folder
+    fi
+
+    OWNER=$(stat -c "%u" $folder)
+    if [[ $OWNER != 33 ]]; then
+        chown -R 33:33 $folder
+    fi
+done
+
+touch $BASE_PATH $BASE_PATH/{composer.json,composer.lock,.php_cs.cache} &&
+chmod a+rw $BASE_PATH $BASE_PATH/{composer.json,composer.lock,.php_cs.cache,vendor/.phpstan-tmp} &&
+chmod -R a+rw $BASE_PATH/{.git/hooks,src,bin} &&
+chmod -R a+x $BASE_PATH/{cli,bin}

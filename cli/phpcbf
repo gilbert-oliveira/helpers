@@ -1,0 +1,18 @@
+#!/bin/bash
+
+if [ -z "$1" ] || [ "$1" = '-h' ] || [ "$1" = '--help' ]; then
+    echo \
+        'This command will analyse PHP source files based on parameters'
+    ./cli/get-git-files --help
+    exit
+fi
+
+eval $(./cli/get-git-files --php $@)
+
+if [ "$FILES" == "" ]; then
+    echo "Nenhum arquivo para verificar !"
+    exit 0
+fi
+
+echo "--- Running PHPCBF"
+./bin/phpcbf --extensions=php --basepath=/var/www/html --standard=phpcs.xml $PARAMS $FILES

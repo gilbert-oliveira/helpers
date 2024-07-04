@@ -1,0 +1,129 @@
+#!/bin/bash
+
+function getHelp() {
+    echo 'The following parameters will define which files to consider:
+    -d, --diff    Will select the files marked as edited on Git
+    -s, --staged  Will select the staged files on Git
+    -a, --all     Will select all the files into the folders "src" and "tests"
+    --ref         Will select the files that was changed between the informed branch/commit/tag and HEAD
+    --php         Will select only PHP files
+    --tests       Will select only files from tests folder
+    --src         Will select only files from src folder
+    <path/file>   Will select the files in the path informed'
+}
+
+GET_GIT_EXPLODE=${GET_GIT_EXPLODE:-0}
+PARAM_FILES=
+GIT_DIFF=0
+GIT_STAGED=0
+ALL_FILES=0
+REF_FILES=0
+GIT_REF=
+ONLY_PHP=0
+ONLY_TWIG=0
+ONLY_SRC=0
+ONLY_TESTS=0
+
+argv=("$@")
+argc=${#@}
+i=0
+while [ $i -lt $argc ]; do
+    if [[ "${argv[$i]}" == "--help" ]] || [[ "${argv[$i]}" == "-h" ]]; then
+        getHelp
+        exit 0
+    elif [[ "${argv[$i]}" == '--twig' ]]; then
+        ONLY_TWIG=1
+    elif [[ "${argv[$i]}" == '--php' ]]; then
+        ONLY_PHP=1
+    elif [[ "${argv[$i]}" == '--src' ]]; then
+        ONLY_SRC=1
+    elif [[ "${argv[$i]}" == '--tests' ]]; then
+        ONLY_TESTS=1
+    elif [[ "${argv[$i]}" == '-d' ]] || [[ "${argv[$i]}" == '--diff' ]]; then
+        GIT_DIFF=1
+        i=$(($i + 1))
+        break
+    elif [[ "${argv[$i]}" == '-s' ]] || [[ "${argv[$i]}" == '--staged' ]]; then
+        GIT_STAGED=1
+        i=$(($i + 1))
+        break
+    elif [[ "${argv[$i]}" == '-a' ]] || [[ "${argv[$i]}" == '--all' ]]; then
+        ALL_FILES=1
+        i=$(($i + 1))
+        break
+    elif [[ "${argv[$i]}" == '--ref' ]]; then
+        REF_FILES=1
+        if [[ ! "${argv[$i + 1]}" =~ ^- ]]; then
+            GIT_REF="${argv[$i + 1]}"
+            i=$(($i + 1))
+        fi
+        i=$(($i + 1))
+        break
+    elif [[ "${argv[$i]}" =~ ^- ]]; then
+        break
+    else
+        PARAM_FILES="$PARAM_FILES
+${argv[$i]}"
+    fi
+    i=$(($i + 1))
+done
+
+i=$(($i + 1))
+echo "PARAMS=\"${@:$i}\""
+
+GREP_REGEXP="."
+[ $ONLY_PHP -eq 1 ] && GREP_REGEXP="(.php|/)$"
+[ $ONLY_TWIG -eq 1 ] && GREP_REGEXP="(.twig|/)$"
+[ $ONLY_SRC -eq 1 ] && GREP_REGEXP="^src/.*${GREP_REGEXP}"
+[ $ONLY_TESTS -eq 1 ] && GREP_REGEXP="^tests/.*${GREP_REGEXP}"
+
+[ ! -z "$PARAM_FILES" ] && {
+    PARAM_FILES=$(sed "s|^$LOCAL_GIT_ROOT/||" <<< ${PARAM_FILES})
+    [ $GET_GIT_EXPLODE -eq 1 ] && PARAM_FILES="$(echo && find $PARAM_FILES -type f)"
+    echo "FILES=\"$(grep -E $GREP_REGEXP <<< ${PARAM_FILES:1})\""
+    exit 0
+}
+
+git config --global --add safe.directory '*'
+
+[ $GIT_DIFF -eq 1 ] && {
+    echo -n 'FILES="'
+    git status --short | grep -E "^R" | cut -d '>' -f 2 | grep -E $GREP_REGEXP
+    git status --short | grep -Ev "^(R|.R|D|.D)" | cut -c 4- | grep -E $GREP_REGEXP
+    echo -n '"'
+    exit 0
+}
+
+[ $GIT_STAGED -eq 1 ] && {
+    echo -n 'FILES="'
+    git diff --cached --name-only --diff-filter=ACMR HEAD | grep -E $GREP_REGEXP
+    echo -n '"'
+    exit 0
+}
+
+[ $ALL_FILES -eq 1 ] && [ $GET_GIT_EXPLODE -eq 0 ] && {
+    [ $ONLY_SRC -eq 1 ] && {
+        echo 'FILES="src"' && exit
+    }
+    [ $ONLY_TESTS -eq 1 ] && {
+        echo 'FILES="tests"' && exit
+    }
+
+    echo 'FILES="src
+tests"'
+    exit 0
+}
+
+[ $ALL_FILES -eq 1 ] && {
+    echo 'FILES="$(git ls-files | grep -E "^(src|tests)" | grep -E "'$GREP_REGEXP'" | grep -v -Ff <(git diff --name-only --diff-filter=D))"'
+    exit 0
+}
+
+[ $REF_FILES -eq 1 ] && {
+    [[ -z "$GIT_REF" ]] && GIT_REF=origin/stable
+
+    echo -n 'FILES="'
+    git diff-tree --diff-filter=ACMR --no-commit-id --name-only -r "$GIT_REF..HEAD" | grep -E $GREP_REGEXP
+    echo '"'
+    exit 0
+}

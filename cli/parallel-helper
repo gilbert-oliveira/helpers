@@ -1,0 +1,32 @@
+#!/bin/bash
+
+fail=$(mktemp -d)/failed
+function fail() {
+    touch $fail
+}
+
+fail_and_continue=$(mktemp -d)/failed_and_continued
+function fail_and_continue() {
+    touch $fail_and_continue
+}
+
+function parallel() {
+    for param in ${@:2}; do
+        $1 "$param" &
+        [ $(jobs | wc -l) -gt 10 ] && wait_and_exit
+    done
+    wait_all
+}
+
+function wait_and_exit() {
+    wait
+    [ -f $fail ] && exit 1
+    jobs > /dev/null
+}
+
+function wait_all() {
+    while [[ $(jobs | wc -l) != 0 ]]; do
+        wait_and_exit
+    done
+    [ -f $fail_and_continue ] && exit 1 || exit 0
+}

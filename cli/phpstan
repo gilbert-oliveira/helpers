@@ -1,0 +1,28 @@
+#!/bin/bash
+
+if [ -z "$1" ] || [ "$1" = '-h' ] || [ "$1" = '--help' ]; then
+    echo \
+        'This command will analyse PHP source files based on parameters'
+    cli/get-git-files --help
+    exit
+fi
+
+eval $(./cli/get-git-files --php $@)
+
+if [ "$FILES" == "" ]; then
+    echo "Nenhum arquivo para verificar !"
+    exit 0
+fi
+
+CONFIG=phpstan.neon
+if [[ "$PARAMS" =~ "max" ]]; then
+    CONFIG=phpstan-max.neon
+fi
+
+APP_ENV=test APP_DEBUG=1 ./bin/console lint:container &> /dev/null
+
+echo $PARAMS | grep -Eq '\--no-progress' || echo "--- Running PHPStan"
+./bin/phpstan --memory-limit=-1 analyse -c $CONFIG --autoload-file=vendor/autoload.php \
+    --error-format=raw $FILES $PARAMS \
+    | sed 's|/var/www/html/||g' | grep -v -e '^$'
+exit ${PIPESTATUS[0]}

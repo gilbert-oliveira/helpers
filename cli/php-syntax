@@ -1,0 +1,32 @@
+#!/bin/bash
+
+if [ -z "$1" ] || [ "$1" = '-h' ] || [ "$1" = '--help' ]; then
+    echo \
+        'This command will analyse PHP Syntax of source files based on parameters'
+    ./cli/get-git-files --help
+    exit
+fi
+
+eval $(GET_GIT_EXPLODE=1 ./cli/get-git-files --php $@)
+
+if [ "$FILES" == "" ]; then
+    echo "Nenhum arquivo para verificar !"
+    exit 0
+fi
+
+source cli/parallel-helper
+
+function first_error () {
+    echo "$PARAMS" | grep -q '\--dont-stop' && fail_and_continue || fail
+}
+
+function check() {
+    T=$(mktemp)
+    php -l $@ &> $T
+    grep -qvE "^No syntax errors" $T && {
+        grep -vE "^No syntax errors" $T | sed '/^$/d;s|\(.*\) in \(.*\) on line \(.*\)|\2:\3: \1|'
+        first_error
+    }
+}
+
+parallel 'check' $FILES

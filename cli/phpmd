@@ -1,0 +1,35 @@
+#!/bin/bash
+
+if [ -z "$1" ] || [ "$1" = '-h' ] || [ "$1" = '--help' ]; then
+    echo \
+        'This command will analyse PHP Syntax of source files based on parameters'
+    ./cli/get-git-files --help
+    exit
+fi
+
+eval $(GET_GIT_EXPLODE=1 ./cli/get-git-files --php $@)
+
+if [ "$FILES" == "" ]; then
+    echo "Nenhum arquivo para verificar !"
+    exit 0
+fi
+
+function success () {
+    echo "$PARAMS" | grep -q "\--quiet" || echo "Nenhum problema identificado para $1 no PHPMD"
+}
+
+function first_error () {
+   echo "$PARAMS" | grep -q '\--dont-stop' && fail_and_continue || fail
+}
+
+function phpmd() {
+    [ -f $1 ] || return
+    log=$(mktemp)
+    $RUN_AT ./bin/phpmd --minimumpriority 4 $1 text phpmd.xml | sed "s|^/var/www/html/||" \
+        && success $1 || first_error
+}
+
+set -e -o pipefail
+source cli/parallel-helper
+
+parallel phpmd $FILES

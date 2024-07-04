@@ -1,0 +1,14 @@
+composer.phar
+/vendor/
+.env
+.idea/
+.vscode
+/var/
+.phpunit.result.cache
+
+###> friendsofphp/php-cs-fixer ###
+/.phpcs-cache
+/.php_cs.cache
+/.php-cs-fixer.php
+/.php-cs-fixer.cache
+###< friendsofphp/php-cs-fixer ###
